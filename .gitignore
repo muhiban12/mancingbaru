@@ -1,0 +1,50 @@
+# ==========================================
+# DEPENDENCIES (Anti Ribuan File)
+# ==========================================
+node_modules/
+**/node_modules/
+package-lock.json
+**/package-lock.json
+
+# ==========================================
+# FILE RAHASIA (ENVIRONMENT)
+# ==========================================
+.env
+.env*.local
+backend/.env
+frontend/.env
+**/.env
+
+# ==========================================
+# EXPO & METRO
+# ==========================================
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+
+# ==========================================
+# NATIVE (Kotlin, Keys, Build Folders)
+# ==========================================
+/ios
+/android
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# ==========================================
+# DEBUG, LOGS, & SYSTEM
+# ==========================================
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+.DS_Store
+*.pem
+*.tsbuildinfo
+app-example
