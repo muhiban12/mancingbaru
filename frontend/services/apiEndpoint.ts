@@ -1,9 +1,9 @@
-import api from './api';
+import api from './apiService';
 import { createFormData } from '../utils/fileupload';
 import { 
   LoginData, RegisterData, SpotData, 
   BookingData, ReviewData, StrikeFeedData 
-} from '../types/api';
+} from '../types/apiTypes';
 
 /* ================= AUTH & USER ================= */
 export const authAPI = {

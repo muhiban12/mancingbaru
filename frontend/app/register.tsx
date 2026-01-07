@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,52 +7,104 @@ import {
   TouchableOpacity,
   ScrollView,
   ImageBackground,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import ProvinceModal from './provinsi'; // sesuaikan path file
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import ProvinceModal from "./provinsi";
+import { authAPI } from "../services/apiEndpoint";
 
-export default function RegisterScreen() { 
+export default function RegisterScreen() {
   const router = useRouter();
-  const [name, setName] = useState(''); 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(''); 
-  const [confirm, setConfirm] = useState('');
+
+  // Logic States
+  const [name, setName] = useState("");
+  const [wa, setWa] = useState(""); // Tambahan untuk DB
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [province, setProvince] = useState("");
+
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [province, setProvince] = useState('');
+  const [error, setError] = useState("");
   const [isModalVisible, setModalVisible] = useState(false);
 
-  const handleRegister = () => {
-    if (!name || !province || !email || !password || !confirm) {
-      setError('Semua data diri wajib diisi');
+  const handleRegister = async () => {
+    const emailRegex = /\S+@\S+\.\S+/;
+    if (!emailRegex.test(email)) {
+      setError("Format email tidak valid");
       return;
     }
-    if (password !== confirm) { 
-      setError('Password dan konfirmasi tidak sama');
-      return;
-    }
-    setError('');
-    router.push('/login');
-  };
 
+    // 2. Validasi nomor WA (minimal 10 digit)
+    if (wa.length < 10) {
+      setError("Nomor WhatsApp tidak valid");
+      return;
+    }
+    if (!name || !wa || !province || !email || !password || !confirm) {
+      setError("Semua data diri wajib diisi");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Password dan konfirmasi tidak sama");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await authAPI.register({
+        nama_lengkap: name,
+        email: email,
+        password: password,
+        nomer_wa: wa,
+        provinsi_asal: province,
+        kota_kabupaten: "-", // Default agar tidak undefined
+      });
+
+      Alert.alert("Berhasil", "Akun berhasil dibuat! Silahkan login.", [
+        { text: "OK", onPress: () => router.push("/login") },
+      ]);
+    } catch (err: any) {
+      // Menampilkan pesan error spesifik dari backend
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Pendaftaran gagal.";
+      setError(msg);
+      console.log("Error Register Detail:", err.response?.data);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* ===== HERO SECTION ===== */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.hero}>
           <ImageBackground
             source={{
-              uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD2f_uyOkGDosF1TZifcsUx2XoKkoyN26RRBY4K3H8dVm6RqA8VIcaaHxvncigvG48qTaYLi9IC0Kzki9QIVZ35KBdSUct97q9-ds8P3F4CJeAgtxqMXCAjEtHagbKn-X4WjvxQRjVt56AnDWtCAG2IdZdReoq-aT2uwWTMaKuvuNq0Ugd5yikcmfVFE_COPFUReiEfGPJ6_EhB5VpKxLZ2tWA4HpVGEEnRmNUwGfePi8MkIbvyqnM3Pw1vBExm8gZhvM-3tdJel3Ub',
+              uri: "https://images.unsplash.com/photo-1544551763-47a0159f9234?auto=format&fit=crop&w=800&q=80",
             }}
             style={styles.heroImage}
-            imageStyle={{ borderBottomLeftRadius: 40, borderBottomRightRadius: 40 }}
+            imageStyle={{
+              borderBottomLeftRadius: 40,
+              borderBottomRightRadius: 40,
+            }}
           >
             <LinearGradient
-              colors={['rgba(10,61,97,0.95)', 'rgba(10,61,97,0.4)', 'transparent']}
+              colors={[
+                "rgba(10,61,97,0.95)",
+                "rgba(10,61,97,0.4)",
+                "transparent",
+              ]}
               style={StyleSheet.absoluteFillObject}
             />
             <View style={styles.heroContent}>
@@ -65,14 +117,19 @@ export default function RegisterScreen() {
           </ImageBackground>
         </View>
 
-        {/* ===== FORM SECTION ===== */}
         <View style={styles.formSection}>
           <Text style={styles.formTitle}>Daftar Akun</Text>
-          <Text style={styles.formSubtitle}>Lengkapi data diri untuk mulai memancing.</Text>
+          <Text style={styles.formSubtitle}>
+            Lengkapi data diri untuk mulai memancing.
+          </Text>
 
-          {/* Nama Lengkap */}
           <View style={styles.inputGroup}>
-            <MaterialIcons name="person" size={20} color="#0a3d61" style={styles.inputIcon} />
+            <MaterialIcons
+              name="person"
+              size={20}
+              color="#0a3d61"
+              style={styles.inputIcon}
+            />
             <TextInput
               placeholder="Nama Lengkap Anda"
               placeholderTextColor="#9aaebc"
@@ -82,30 +139,56 @@ export default function RegisterScreen() {
             />
           </View>
 
-          {/* Provinsi */}
+          {/* Input WA Tambahan agar sesuai Database */}
           <View style={styles.inputGroup}>
-            <MaterialIcons name="map" size={20} color="#0a3d61" style={styles.inputIcon} />
-            <TouchableOpacity style={{ flex: 1 }} onPress={() => {
-                  console.log('Open modal');
-                  setModalVisible(true);
+            <MaterialIcons
+              name="phone"
+              size={20}
+              color="#0a3d61"
+              style={styles.inputIcon}
+            />
+            <TextInput
+              placeholder="Nomor WhatsApp (Contoh: 0812...)"
+              placeholderTextColor="#9aaebc"
+              style={styles.input}
+              value={wa}
+              onChangeText={setWa}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <MaterialIcons
+              name="map"
+              size={20}
+              color="#0a3d61"
+              style={styles.inputIcon}
+            />
+            <TouchableOpacity
+              style={{ flex: 1 }}
+              onPress={() => setModalVisible(true)}
+            >
+              <Text
+                style={{
+                  fontSize: 16,
+                  color: province ? "#111518" : "#9aaebc",
                 }}
-                >
-              <Text style={{
-                fontSize: 16,
-                color: province ? '#111518' : '#9aaebc',
-                textAlignVertical: 'center',
-              }}>
-                {province || 'Provinsi Domisili'}
+              >
+                {province || "Provinsi Domisili"}
               </Text>
             </TouchableOpacity>
             <MaterialIcons name="expand-more" size={20} color="#637888" />
           </View>
 
-          {/* Email */}
           <View style={styles.inputGroup}>
-            <MaterialIcons name="mail" size={20} color="#0a3d61" style={styles.inputIcon} />
+            <MaterialIcons
+              name="mail"
+              size={20}
+              color="#0a3d61"
+              style={styles.inputIcon}
+            />
             <TextInput
-              placeholder="xxx123@email.com"
+              placeholder="Email"
               placeholderTextColor="#9aaebc"
               style={styles.input}
               value={email}
@@ -115,34 +198,39 @@ export default function RegisterScreen() {
             />
           </View>
 
-          {/* Password */}
           <View style={styles.inputGroup}>
-            <MaterialIcons name="lock" size={20} color="#0a3d61" style={styles.inputIcon} />
+            <MaterialIcons
+              name="lock"
+              size={20}
+              color="#0a3d61"
+              style={styles.inputIcon}
+            />
             <TextInput
-              placeholder="••••••••"
+              placeholder="Password"
               placeholderTextColor="#9aaebc"
               secureTextEntry={!showPassword}
               style={styles.input}
               value={password}
               onChangeText={setPassword}
             />
-            <TouchableOpacity
-              style={styles.passwordToggle}
-              onPress={() => setShowPassword(!showPassword)}
-            >
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
               <MaterialIcons
-                name={showPassword ? 'visibility-off' : 'visibility'}
+                name={showPassword ? "visibility-off" : "visibility"}
                 size={20}
                 color="#637888"
               />
             </TouchableOpacity>
           </View>
 
-          {/* Confirm Password */}
           <View style={styles.inputGroup}>
-            <MaterialIcons name="lock-reset" size={20} color="#0a3d61" style={styles.inputIcon} />
+            <MaterialIcons
+              name="lock-reset"
+              size={20}
+              color="#0a3d61"
+              style={styles.inputIcon}
+            />
             <TextInput
-              placeholder="••••••••"
+              placeholder="Konfirmasi Password"
               placeholderTextColor="#9aaebc"
               secureTextEntry
               style={styles.input}
@@ -151,28 +239,46 @@ export default function RegisterScreen() {
             />
           </View>
 
-          {/* Error Message */}
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          {/* Tombol Daftar */}
-          <TouchableOpacity style={styles.registerButton} activeOpacity={0.9} onPress={handleRegister}>
+          <TouchableOpacity
+            style={[styles.registerButton, loading && { opacity: 0.7 }]}
+            onPress={handleRegister}
+            disabled={loading}
+          >
             <LinearGradient
-              colors={['#0a3d61', '#0e578a']}
+              colors={["#0a3d61", "#0e578a"]}
               style={styles.registerGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <MaterialIcons name="sailing" size={22} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.registerText}>Daftar</Text>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <MaterialIcons
+                    name="sailing"
+                    size={22}
+                    color="#fff"
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={styles.registerText}>Daftar</Text>
+                </>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
-        {/* ===== BOX BAWAH ===== */}
         <View style={styles.loginBox}>
           <Text style={styles.loginText}>
             Sudah punya akun?
-            <Text style={styles.loginLink} onPress={() => router.push('/login')}> Masuk</Text>
+            <Text
+              style={styles.loginLink}
+              onPress={() => router.push("/login")}
+            >
+              {" "}
+              Masuk
+            </Text>
           </Text>
         </View>
       </ScrollView>
@@ -181,77 +287,86 @@ export default function RegisterScreen() {
         visible={isModalVisible}
         onClose={() => setModalVisible(false)}
         onSelect={(prov) => setProvince(prov)}
-        />
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f7ff' },
+  container: { flex: 1, backgroundColor: "#f0f7ff" },
   scrollContent: { flexGrow: 1, paddingBottom: 40 },
-  
-  // Hero
   hero: { height: 280 },
   heroImage: { flex: 1 },
-  heroContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 20 },
+  heroContent: { flex: 1, alignItems: "center", justifyContent: "center" },
   heroIcon: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
     padding: 12,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: "rgba(255,255,255,0.2)",
     marginBottom: 12,
   },
-  heroTitle: { fontSize: 28, fontWeight: '800', color: '#fff', textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 4 },
-  heroSubtitle: { fontSize: 14, fontWeight: '600', color: '#2dd4bf', marginTop: 4 },
-
-  // Form
+  heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff" },
+  heroSubtitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2dd4bf",
+    marginTop: 4,
+  },
   formSection: { flex: 1, paddingHorizontal: 24, paddingTop: 16 },
-  formTitle: { fontSize: 22, fontWeight: '700', color: '#0a3d61', textAlign: 'center', marginBottom: 4 },
-  formSubtitle: { fontSize: 14, color: '#637888', textAlign: 'center', marginBottom: 20 },
+  formTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#0a3d61",
+    textAlign: "center",
+  },
+  formSubtitle: {
+    fontSize: 14,
+    color: "#637888",
+    textAlign: "center",
+    marginBottom: 20,
+  },
   inputGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(224,242,254,0.2)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(224,242,254,0.2)",
     borderWidth: 1,
-    borderColor: '#dce1e5',
+    borderColor: "#dce1e5",
     borderRadius: 12,
     marginBottom: 16,
     paddingHorizontal: 12,
     height: 56,
   },
   inputIcon: { marginRight: 8 },
-  input: { flex: 1, fontSize: 16, color: '#111518' },
-  passwordToggle: { paddingHorizontal: 8 },
-
-  // Error
-  errorText: { color: '#f97316', fontSize: 14, textAlign: 'center', marginBottom: 12 },
-
-  // Register button (gradient)
+  input: { flex: 1, fontSize: 16, color: "#111518" },
+  errorText: {
+    color: "#f97316",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 12,
+  },
   registerButton: {
     height: 56,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginTop: 10,
   },
   registerGradient: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  registerText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-
-  // Bottom box: "Sudah punya akun? Masuk"
+  registerText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   loginBox: {
-    backgroundColor: 'rgba(224,242,254,0.3)',
+    backgroundColor: "rgba(224,242,254,0.3)",
     borderRadius: 12,
     padding: 12,
     marginTop: 24,
     borderWidth: 1,
-    borderColor: '#e0f2fe',
-    alignItems: 'center',
+    borderColor: "#e0f2fe",
+    alignItems: "center",
   },
-  loginText: { fontSize: 14, color: '#637888' },
-  loginLink: { color: '#f97316', fontWeight: '700' },
+  loginText: { fontSize: 14, color: "#637888" },
+  loginLink: { color: "#f97316", fontWeight: "700" },
 });

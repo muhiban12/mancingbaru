@@ -81,7 +81,7 @@ const start = async () => {
 🚀 SERVER PANCINGIN BERHASIL DIAKTIFKAN
 =======================================
 📍 Local:   http://localhost:${PORT}
-📍 Network: ${process.env.BASE_URL}
+📍 Network: ${process.env.EXPO_PUBLIC_API_URL}
 =======================================
     `);
   } catch (err) {

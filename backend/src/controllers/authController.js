@@ -13,6 +13,7 @@ const register = async (request, reply) => {
   } = request.body;
 
   try {
+    // 1. Cek Email
     const [existing] = await pool.execute(
       "SELECT id FROM users WHERE email = ?",
       [email]
@@ -22,24 +23,26 @@ const register = async (request, reply) => {
       return reply.code(400).send({ message: "Email sudah terdaftar" });
     }
 
+    // 2. Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 1️⃣ Insert user
+    // 3. Insert User (status_akun akan otomatis 'Pending' dari database)
     const [result] = await pool.execute(
       `INSERT INTO users 
-       (nama_lengkap, email, password, nomer_wa, provinsi_asal, kota_kabupaten)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       (nama_lengkap, email, password, nomer_wa, provinsi_asal, kota_kabupaten, status_akun)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        nama_lengkap,
+        nama_lengkap || "",
         email,
         hashedPassword,
-        nomer_wa,
-        provinsi_asal,
-        kota_kabupaten,
+        nomer_wa || "",
+        provinsi_asal || "",
+        kota_kabupaten || "-", // Menghindari nilai null/undefined
+        "Pending",
       ]
     );
 
-    // 2️⃣ Set role DEFAULT = angler (misal role_id = 3)
+    // 4. Set role Angler (ID 3)
     await pool.execute(
       "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
       [result.insertId, 3]
@@ -50,6 +53,8 @@ const register = async (request, reply) => {
       message: "Registrasi berhasil sebagai Angler",
     });
   } catch (error) {
+    // PENTING: Lihat log ini di terminal laptop Anda jika masih gagal
+    console.error("DETAIL ERROR DATABASE:", error.message);
     return reply.code(500).send({ error: error.message });
   }
 };
@@ -62,10 +67,12 @@ const login = async (request, reply) => {
     ]);
     if (users.length === 0)
       return reply.code(401).send({ message: "Email atau password salah" });
+
     const user = users[0];
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
       return reply.code(401).send({ message: "Email atau password salah" });
+
     const token = request.server.jwt.sign({ id: user.id, email: user.email });
     return reply.send({
       status: "Success",
@@ -77,7 +84,6 @@ const login = async (request, reply) => {
   }
 };
 
-// --- FUNGSI BARU ---
 const getProfile = async (request, reply) => {
   try {
     const userId = request.user.id; // Diambil dari token oleh middleware
