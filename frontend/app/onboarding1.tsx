@@ -62,8 +62,8 @@ export default function OnboardingFindSpots() {
               <View style={styles.imageOverlay} />
               
               {/* Featured Spot Card */}
-              <BlurView style={styles.featuredCard}>
-                <View style={styles.featuredCardContent}>
+              <BlurView intensity={80} tint="light" style={styles.featuredCard}>
+                <View style={styles.featuredCardInner}>
                   <View style={styles.featuredIconContainer}>
                     <MaterialIcons name="star" size={20} color="#f97316" />
                   </View>
@@ -71,9 +71,9 @@ export default function OnboardingFindSpots() {
                     <Text style={styles.featuredLabel}>FEATURED SPOT</Text>
                     <Text style={styles.featuredTitle}>Danau Toba, North Sumatra</Text>
                   </View>
-                </View>
-                <View style={styles.arrowContainer}>
-                  <MaterialIcons name="arrow-outward" size={18} color="#64748b" />
+                  <View style={styles.arrowContainer}>
+                    <MaterialIcons name="arrow-outward" size={18} color="#64748b" />
+                  </View>
                 </View>
               </BlurView>
             </ImageBackground>
@@ -211,12 +211,20 @@ const styles = StyleSheet.create({
   },
   featuredCard: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 10,
-    overflow: 'hidden', // untuk clip blur
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    overflow: 'hidden',
   },
   featuredCardContent: {
     flexDirection: 'row',
@@ -226,7 +234,7 @@ const styles = StyleSheet.create({
   featuredIconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 12,
     backgroundColor: 'rgba(249, 115, 22, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -241,21 +249,23 @@ const styles = StyleSheet.create({
     color: '#64748b',
     letterSpacing: 1,
     textTransform: 'uppercase',
+    marginBottom: 2,
   },
   featuredTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: '#0a3d61',
-    marginTop: 2,
+    lineHeight: 18,
   },
   arrowContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(226, 232, 240, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
   contentSection: {
     backgroundColor: '#fff',
@@ -379,5 +389,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  
+  featuredCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

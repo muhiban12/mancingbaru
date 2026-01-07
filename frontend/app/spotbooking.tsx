@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TournamentDetailScreen from './detailLomba';
+import { useLocalSearchParams } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,6 +27,12 @@ export default function SpotDetailScreen() {
   const [startTime, setStartTime] = useState('08:00');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [zoomMap, setZoomMap] = useState(false); 
+  const params = useLocalSearchParams();
+
+  const spotData = params.spotData ? JSON.parse(params.spotData as string) : null;
+  const spotName = spotData?.name || 'Telaga Berkah';
+  const spotLocation = spotData?.location || 'Jl. Mancing No. 5, Bogor';
+  const spotRating = spotData?.rating || 4.5;
 
   const dates = [
     { day: 'Sen', date: 12, active: true },

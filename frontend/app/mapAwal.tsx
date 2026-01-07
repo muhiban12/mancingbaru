@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import SideDrawer from './menusamping';
 import FilterPopup from './filterpopup1';
-import SpotDetailPopup from './previewspot'; // Import SpotDetailPopup
+import SpotDetailPopup from './previewspot'; // Preview untuk komersial
 
 export default function MapsScreen() {
   const router = useRouter();
@@ -24,8 +24,8 @@ export default function MapsScreen() {
   const [activeTab, setActiveTab] = useState('map');
   const [showSideDrawer, setShowSideDrawer] = useState(false);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
-  const [showSpotDetail, setShowSpotDetail] = useState(false); // State untuk SpotDetailPopup
-  const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null); // State untuk menyimpan spot ID yang dipilih
+  const [showSpotPreview, setShowSpotPreview] = useState(false); // Ganti nama state
+  const [selectedSpot, setSelectedSpot] = useState<any>(null); // Simpan data spot yang dipilih
   
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -37,7 +37,7 @@ export default function MapsScreen() {
     return (value / 100) * dimension;
   };
 
-  // Memoized map points with calculated positions
+  // Memoized map points with calculated positions - HAPUS FEATURED
   const mapPoints = useMemo(() => [
     { 
       id: '1', 
@@ -45,7 +45,9 @@ export default function MapsScreen() {
       type: 'commercial', 
       x: calculatePosition('20%'), 
       y: calculatePosition('30%', false), 
-      icon: 'storefront' 
+      icon: 'storefront',
+      location: 'Jl. Mancing No. 5, Bogor',
+      rating: 4.3
     },
     { 
       id: '2', 
@@ -53,35 +55,26 @@ export default function MapsScreen() {
       type: 'wild', 
       x: calculatePosition('15%'), 
       y: calculatePosition('45%', false), 
-      icon: 'forest' 
+      icon: 'forest',
+      location: 'Lembang, Jawa Barat',
+      rating: 4.5
     },
     { 
       id: '3', 
       name: 'Telaga Berkah', 
-      type: 'featured', 
+      type: 'commercial', // Ubah jadi commercial
       x: calculatePosition('48%'), 
       y: calculatePosition('52%', false), 
       icon: 'phishing', 
-      rating: 4.5 
+      rating: 4.5,
+      location: 'Jl. Raya Puncak, Bogor'
     },
   ], [width, height]);
 
-  // Start pulse animation
+  // Start pulse animation - HAPUS untuk featured
   React.useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    // Hapus loop animation karena tidak ada featured
+    // Atau bisa kita buat hanya untuk commercial tertentu
   }, []);
 
   const toggleSidebar = () => {
@@ -92,31 +85,77 @@ export default function MapsScreen() {
     setShowFilterPopup(true);
   };
 
-  const handleSpotPress = (spotId: string) => {
-    setSelectedSpotId(spotId); // Simpan spot ID yang dipilih
-    setShowSpotDetail(true); // Buka SpotDetailPopup modal
-    
-    // Jika ingin passing data spot berdasarkan ID, bisa tambahkan di sini
-    console.log('Spot ID yang dipilih:', spotId);
-    
-    // Contoh: Tampilkan data berbeda berdasarkan spot ID
-    switch(spotId) {
-      case '1':
-        console.log('Kolam Bahagia - Spot komersial');
-        break;
-      case '2':
-        console.log('Sungai Deras - Spot alam liar');
-        break;
-      case '3':
-        console.log('Telaga Berkah - Spot featured');
-        break;
+  // Di handleSpotPress di MapsScreen:
+const handleSpotPress = (spotId: string) => {
+  const spot = mapPoints.find(p => p.id === spotId);
+  
+  if (spot) {
+    if (spot.type === 'commercial') {
+      // Untuk komersial: tampilkan preview popup
+      setSelectedSpot(spot);
+      setShowSpotPreview(true);
+    } else if (spot.type === 'wild') {
+      // Untuk liar: langsung ke detail spot liar
+      router.push({
+        pathname: '/detailspotliar',
+        params: { 
+          spotId: spot.id,
+          spotName: spot.name,
+          spotType: spot.type,
+          spotLocation: spot.location || 'Lembang, Jawa Barat',
+          spotRating: spot.rating?.toString() || '4.5',
+          spotData: JSON.stringify(spot) 
+        }
+      });
     }
-  };
+  }
+};
 
-  const handleBookingFromSpotDetail = () => {
-    setShowSpotDetail(false); // Tutup SpotDetailPopup
-    router.push('/spotbooking'); // Navigasi ke halaman booking
-  };
+const handleBookingFromPreview = (spotId: string) => {
+  const spot = mapPoints.find(p => p.id === spotId);
+  setShowSpotPreview(false); // Tutup preview
+  
+  if (spot) {
+    // Navigasi ke spotdetail dengan data spot
+    router.push({
+      pathname: '/spotbooking',
+      params: { 
+        spotId: spot.id,
+        spotName: spot.name,
+        spotType: spot.type,
+        spotLocation: spot.location || 'Jl. Mancing No. 5, Bogor',
+        spotRating: spot.rating?.toString() || '4.5',
+        spotData: JSON.stringify(spot) 
+      }
+    });
+  }
+};
+
+const getPointStyle = (type: string) => {
+  switch(type) {
+    case 'wild':
+      return {
+        backgroundColor: 'rgba(52, 211, 153, 0.95)',
+        textColor: '#fff',
+        starColor: '#fff'
+      };
+    case 'commercial':
+      return {
+        backgroundColor: 'rgba(19, 164, 236, 0.95)',
+        textColor: '#fff',
+        starColor: '#fff'
+      };
+    default:
+      return {
+        backgroundColor: '#fff',
+        textColor: '#1e293b',
+        starColor: '#f59e0b'
+      };
+  }
+};
+
+
+  
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
@@ -196,100 +235,82 @@ export default function MapsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Filter Chips */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterChips}
-          contentContainerStyle={styles.filterChipsContent}
-        >
-          {filters.map((filter) => (
-            <TouchableOpacity
-              key={filter.id}
-              style={[
-                styles.filterChip,
-                selectedFilter === filter.id && styles.filterChipActive,
-              ]}
-              onPress={() => setSelectedFilter(filter.id)}
-              activeOpacity={0.7}
-            >
-              {filter.id !== 'weather' && (
-                <View style={[styles.filterDot, { backgroundColor: filter.color }]} />
-              )}
-              {filter.id === 'weather' && (
-                <MaterialIcons name={filter.icon as any} size={16} color={filter.color} />
-              )}
-              <Text style={[
-                styles.filterChipText,
-                selectedFilter === filter.id && styles.filterChipTextActive,
-              ]}>
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
         {/* Map Points */}
-        {mapPoints.map((point) => (
-          <TouchableOpacity
-            key={point.id}
-            style={[
-              styles.mapPoint,
-              { 
-                left: point.x,
-                top: point.y,
-              },
-              point.type === 'featured' && styles.featuredPoint,
-            ]}
-            onPress={() => handleSpotPress(point.id)}
-            activeOpacity={0.8}
-          >
-            {/* Point Label */}
-            {point.rating && (
-              <View style={styles.pointLabel}>
-                <Text style={styles.pointName}>{point.name}</Text>
-                <View style={styles.ratingContainer}>
-                  <Text style={styles.ratingText}>{point.rating}</Text>
-                  <MaterialIcons name="star" size={10} color="#f59e0b" />
-                </View>
-              </View>
-            )}
+        {mapPoints.map((point) => {
+  const pointStyle = getPointStyle(point.type);
+  
+  return (
+    <TouchableOpacity
+      key={point.id}
+      style={[
+        styles.mapPoint,
+        { 
+          left: point.x,
+          top: point.y,
+        },
+      ]}
+      onPress={() => handleSpotPress(point.id)}
+      activeOpacity={0.8}
+    >
+      {point.rating && (
+        <View style={[
+          styles.pointLabel,
+          { backgroundColor: pointStyle.backgroundColor }
+        ]}>
+          <Text style={[
+            styles.pointName,
+            { color: pointStyle.textColor }
+          ]}>
+            {point.name}
+          </Text>
+          <View style={styles.ratingContainer}>
+            <Text style={[
+              styles.ratingText,
+              { color: pointStyle.textColor }
+            ]}>
+              {point.rating}
+            </Text>
+            <MaterialIcons 
+              name="star" 
+              size={10} 
+              color={pointStyle.starColor} 
+            />
+          </View>
+        </View>
+      )}
 
-            {/* Point Marker */}
-            <Animated.View
-              style={[
-                styles.pointMarker,
-                point.type === 'commercial' && { backgroundColor: '#13a4ec' },
-                point.type === 'wild' && { backgroundColor: '#34D399' },
-                point.type === 'featured' && styles.featuredMarker,
-                point.type === 'featured' && { transform: [{ scale: pulseAnim }] },
-              ]}
-            >
-              <MaterialIcons 
-                name={point.icon as any} 
-                size={point.type === 'featured' ? 24 : 20} 
-                color="#fff" 
-              />
-              
-              {/* Pulse effect for featured point */}
-              {point.type === 'featured' && (
-                <>
-                  <View style={styles.pulseRing1} />
-                  <View style={styles.pulseRing2} />
-                  <View style={styles.pinShadow} />
-                </>
-              )}
-            </Animated.View>
+      {/* Point Marker */}
+      <View
+        style={[
+          styles.pointMarker,
+          point.type === 'commercial' && { backgroundColor: '#13a4ec' },
+          point.type === 'wild' && { backgroundColor: '#34D399' },
+        ]}
+      >
+        <MaterialIcons 
+          name={point.icon as any} 
+          size={20} 
+          color="#fff" 
+        />
+      </View>
 
-            {/* Point Name (for non-featured) */}
-            {!point.rating && (
-              <View style={styles.simpleLabel}>
-                <Text style={styles.simpleLabelText}>{point.name}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-
+      {/* Simple Label for non-rated points */}
+      {!point.rating && (
+        <View style={[
+          styles.simpleLabel,
+          { backgroundColor: pointStyle.backgroundColor }
+        ]}>
+          <Text style={[
+            styles.simpleLabelText,
+            { color: pointStyle.textColor }
+          ]}>
+            {point.name}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+        })}
         {/* Map Controls */}
         <View style={styles.mapControls}>
           <TouchableOpacity style={styles.mapControlButton} activeOpacity={0.7}>
@@ -357,16 +378,18 @@ export default function MapsScreen() {
         onClose={() => setShowFilterPopup(false)}
       />
 
-      {/* SpotDetailPopup Modal */}
+      {/* SpotPreview Modal untuk komersial */}
       <SpotDetailPopup
-        visible={showSpotDetail}
-        onClose={() => setShowSpotDetail(false)}
+        visible={showSpotPreview}
+        onClose={() => setShowSpotPreview(false)}
+        spotData={selectedSpot}
+        onBookNow={(spotId) => handleBookingFromPreview(spotId)}
       />
     </View>
   );
 }
 
-// Styles tetap sama seperti sebelumnya
+// Styles - hapus yang terkait featured
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -489,9 +512,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  featuredPoint: {
-    zIndex: 20,
-  },
   pointLabel: {
     backgroundColor: '#fff',
     paddingHorizontal: 12,
@@ -535,44 +555,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
-  },
-  featuredMarker: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#13a4ec',
-    shadowColor: '#13a4ec',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  pulseRing1: {
-    position: 'absolute',
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#13a4ec',
-    opacity: 0.3,
-    zIndex: -1,
-  },
-  pulseRing2: {
-    position: 'absolute',
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    backgroundColor: '#13a4ec',
-    opacity: 0.15,
-    zIndex: -2,
-  },
-  pinShadow: {
-    position: 'absolute',
-    bottom: -6,
-    width: 12,
-    height: 3,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 1.5,
-    zIndex: -1,
   },
   simpleLabel: {
     backgroundColor: 'rgba(255,255,255,0.9)',

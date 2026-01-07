@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TournamentPaymentScreen() {
   const router = useRouter();
-  const [paymentMethod, setPaymentMethod] = useState('gopay');
+  const [paymentMethod, setPaymentMethod] = useState('gopay'); 
   const [participantData, setParticipantData] = useState({
     fullName: 'Budi Santoso',
     phoneNumber: '',
@@ -38,7 +38,7 @@ export default function TournamentPaymentScreen() {
     serviceFee: 2000,
     uniqueCode: 123,
     totalPayment: 151877,
-  };
+  }; 
 
   const handleBack = () => {
     router.back();
