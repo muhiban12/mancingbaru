@@ -1,136 +1,93 @@
 require("dotenv").config();
 const path = require("path");
 const pool = require("./config/db");
-const fastify = require("fastify")({ logger: true });
+const fastify = require("fastify")({ 
+  logger: { level: 'info' }, // Logger lebih bersih
+  ajv: { customOptions: { removeAdditional: "all" } } // Keamanan tambahan
+});
 const multer = require("fastify-multer");
-
-const rootDir = process.cwd();
 
 /* ================= CORE PLUGINS ================= */
 
-// CORS
+// 1. CORS - Dibuat fleksibel agar Expo (Mobile) bisa tembus
 fastify.register(require("@fastify/cors"), {
-  origin: "*",
+  origin: true, // Mengizinkan semua origin di development
+  methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 });
 
-// Multipart / Upload
+// 2. Multipart / Upload - Pastikan ini sebelum Routes
 fastify.register(multer.contentParser);
 
-// Static files - GUNAKAN rootDir atau __dirname yang sudah didefinisikan
+// 3. Static Files - Diarahkan ke folder 'public' atau langsung 'uploads'
+// Supaya buildFileUrl (http://ip:3000/uploads/folder/file.jpg) jalan
 fastify.register(require("@fastify/static"), {
-  root: path.join(rootDir, "uploads"), // Lebih aman pakai rootDir
+  root: path.join(__dirname, "../uploads"), // Sesuaikan dengan struktur folder repo baru
   prefix: "/uploads/",
+  decorateReply: false // Agar tidak bentrok jika ada static plugin lain
 });
 
-// JWT
+// 4. JWT - Integrasi dengan request.user
 fastify.register(require("@fastify/jwt"), {
-  secret: process.env.JWT_SECRET || "supersecret",
+  secret: process.env.JWT_SECRET || "mancing_mania_mantap_123",
 });
 
+// Decorator agar request.user tersedia secara global di controller
+fastify.decorate("authenticate", async (request, reply) => {
+  try {
+    await request.jwtVerify();
+  } catch (err) {
+    reply.send(err);
+  }
+});
 
-/* ================= HEALTH CHECK ================= */
+/* ================= HEALTH CHECK & DEBUG ================= */
 fastify.get("/cek-koneksi", async (request, reply) => {
   try {
     const [rows] = await pool.execute("SELECT 1 + 1 AS result");
     return {
-      status: "Berhasil!",
-      message: "Backend sudah nyambung ke database apps_pancingin",
-      data: rows,
+      status: "Success",
+      message: "Backend Connected to Database: " + process.env.DB_NAME,
+      env_ip: process.env.BASE_URL
     };
   } catch (err) {
-    console.error("Database error:", err);
-    return reply.code(500).send({
-      status: "Gagal",
-      error: "Tidak bisa terhubung ke database",
-      detail: err.message,
-    });
+    return reply.code(500).send({ status: "Error", message: err.message });
   }
-});
-
-// Tambahkan route test untuk debug
-fastify.get("/debug-paths", async (request, reply) => {
-  return {
-    rootDir: rootDir,
-    cwd: process.cwd(),
-    mainModule: require.main.filename,
-    uploadsPath: path.join(rootDir, "uploads")
-  };
 });
 
 /* ================= ROUTES ================= */
-fastify.register(require("./src/routes/indexRoutes"), {
+// Daftarkan rute utama
+fastify.register(require("./routes/indexRoutes"), {
   prefix: "/api",
 });
-
-/* ================= SYSTEM JOB ================= */
-const {
-  systemUpdateExpiredBookings,
-} = require("./src/controllers/systemController");
-
-setInterval(async () => {
-  try {
-    await systemUpdateExpiredBookings();
-    console.log("⏰ Booking expired berhasil diperbarui");
-  } catch (err) {
-    console.error("❌ Cron error:", err.message);
-  }
-}, 5 * 60 * 1000);
 
 /* ================= START SERVER ================= */
 const start = async () => {
   try {
     const PORT = process.env.PORT || 3000;
     
-    // Test koneksi database dulu
-    try {
-      const [result] = await pool.execute("SELECT 1");
-      console.log("✅ Database connected successfully");
-    } catch (dbErr) {
-      console.error("❌ Database connection failed:", dbErr.message);
-      console.log("⚠️  Continuing without database...");
-    }
-    
+    // Test Database
+    const connection = await pool.getConnection();
+    console.log("✅ [DB] Database Connected Successfully");
+    connection.release();
+
+    // Listen di 0.0.0.0 sangat penting untuk Expo/Mobile Testing
     await fastify.listen({
       port: PORT,
       host: "0.0.0.0",
     });
-    
-    console.log("=".repeat(60));
-    console.log("🚀 SERVER APPMANCING BERHASIL DIAKTIFKAN");
-    console.log("=".repeat(60));
-    console.log(`📍 Server URL: http://localhost:${PORT}`);
-    console.log(`📍 API Base URL: http://localhost:${PORT}/api`);
-    console.log(`📍 Health Check: http://localhost:${PORT}/cek-koneksi`);
-    console.log(`📍 Debug Paths: http://localhost:${PORT}/debug-paths`);
-    console.log("");
-    console.log("📌 ENDPOINT UTAMA:");
-    console.log(`   🔐 POST  http://localhost:${PORT}/api/auth/login`);
-    console.log(`   🔔 GET   http://localhost:${PORT}/api/notifications`);
-    console.log(`   📍 GET   http://localhost:${PORT}/api/map-spots`);
-    console.log("");
-    console.log("🛠️  Untuk testing:");
-    console.log("   curl http://localhost:3000/debug-paths");
-    console.log("   curl http://localhost:3000/cek-koneksi");
-    console.log("=".repeat(60));
-    
+
+    console.log(`
+🚀 SERVER PANCINGIN BERHASIL DIAKTIFKAN
+=======================================
+📍 Local:   http://localhost:${PORT}
+📍 Network: ${process.env.BASE_URL}
+=======================================
+    `);
   } catch (err) {
-    console.error("❌ GAGAL MENJALANKAN SERVER:");
-    console.error("Error:", err.message);
-    console.error("Stack:", err.stack);
+    fastify.log.error(err);
     process.exit(1);
   }
 };
 
-// Error handlers
-process.on("uncaughtException", (error) => {
-  console.error("💥 UNCAUGHT EXCEPTION:", error.message);
-  console.error(error.stack);
-});
-
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("💥 UNHANDLED REJECTION at:", promise);
-  console.error("Reason:", reason);
-});
-
-// Start server
 start();
