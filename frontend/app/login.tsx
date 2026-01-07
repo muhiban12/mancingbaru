@@ -46,10 +46,13 @@ export default function LoginScreen() {
       console.log("Login Berhasil:", response.data);
 
       // Simpan data ke storage
-      await AsyncStorage.setItem("userToken", response.data.token);
-      await AsyncStorage.setItem("userData", JSON.stringify(response.data.user));
+// 1. Simpan Token (Gunakan key "token" agar standar)
+      await AsyncStorage.setItem("token", response.data.token); 
+      
+      // 2. Simpan Data User (Gunakan key "user" agar dibaca oleh SideDrawer)
+      await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
 
-      Alert.alert("Berhasil", `Selamat datang kembali!`);
+      Alert.alert("Berhasil boss", `Selamat datang icibosss!`);
       
       // Arahkan ke halaman utama
       router.replace("/mapAwal");

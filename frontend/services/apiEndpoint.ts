@@ -10,6 +10,7 @@ export const authAPI = {
   register: (data: RegisterData) => api.post('/auth/register', data),
   login: (data: LoginData) => api.post('/auth/login', data),
   upgradeToOwner: (data: any) => api.post('/user/upgrade-to-owner', data),
+  getProfile: () => api.get('/auth/me'), // Tambahkan ini di backend kamu nanti
 };
 
 /* ================= MAP & PUBLIC SPOTS ================= */
