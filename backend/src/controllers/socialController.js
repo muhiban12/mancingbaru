@@ -8,6 +8,7 @@ const createStrikeFeed = async (request, reply) => {
     // Ambil data dari body (JSON)
     const { nama_ikan, berat, panjang, caption, wild_spot_id, foto_base64 } = request.body;
     const userId = request.user.id;
+    console.log("SIAPA YANG LAGI LOGIN?:", userId); // Liat di terminal laptop kamu muncul angka berapa
 
     let finalImageName = "";
 

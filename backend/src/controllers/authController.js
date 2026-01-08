@@ -86,9 +86,9 @@ const login = async (request, reply) => {
 
 const getProfile = async (request, reply) => {
   try {
-    const userId = request.user.id; // Diambil dari token oleh middleware
+    const userId = request.user.id;
     const [rows] = await pool.execute(
-      "SELECT id, nama_lengkap, email, nomer_wa, provinsi_asal, kota_kabupaten FROM users WHERE id = ?",
+      "SELECT id, nama_lengkap, email, role_id FROM users u JOIN user_roles ur ON u.id = ur.user_id WHERE u.id = ?",
       [userId]
     );
     return reply.send({ status: "Success", data: rows[0] });

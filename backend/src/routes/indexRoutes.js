@@ -6,6 +6,7 @@ module.exports = async function (fastify) {
   const auth = require("../controllers/authController");
   fastify.post("/auth/register", auth.register);
   fastify.post("/auth/login", auth.login);
+  fastify.get("/auth/me", { preHandler: [authenticate] }, auth.getProfile);
 
   fastify.post("/user/upgrade-to-owner", {
     preHandler: [authenticate],

@@ -11,25 +11,28 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
-  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { socialAPI, masterAPI } from "../services/apiEndpoint";
-import api from "../services/apiService"; // Import api langsung untuk bypass FormData
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { masterAPI, authAPI } from "../services/apiEndpoint";
+import api from "../services/apiService";
 
 export default function PostStrikeScreen() {
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [base64Data, setBase64Data] = useState<string | null>(null); // STATE YANG TADI KURANG
+  const [base64Data, setBase64Data] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [fishList, setFishList] = useState<any[]>([]);
   const [wildSpots, setWildSpots] = useState<any[]>([]);
   const [isFishModalVisible, setIsFishModalVisible] = useState(false);
   const [isSpotModalVisible, setIsSpotModalVisible] = useState(false);
+
+  // State untuk data user
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     species: "",
@@ -45,7 +48,41 @@ export default function PostStrikeScreen() {
 
   useEffect(() => {
     loadInitialData();
+    loadUserProfile();
   }, []);
+
+  // FUNGSI LOAD USER (HYBRID: Storage + API)
+  const loadUserProfile = async () => {
+    try {
+      // 1. Ambil data cepat dari storage dulu
+      const savedUser = await AsyncStorage.getItem("user");
+      if (savedUser) {
+        setCurrentUser(JSON.parse(savedUser));
+      }
+
+      // 2. Validasi/Update data terbaru dari API profile (/auth/me)
+      const response = await authAPI.getProfile();
+      if (response.data && response.data.status === "Success") {
+        const userData = response.data.data;
+        setCurrentUser(userData);
+        // Simpan versi terbaru ke storage
+        await AsyncStorage.setItem("user", JSON.stringify(userData));
+        console.log(
+          "User Verified:",
+          userData.nama_lengkap,
+          "ID:",
+          userData.id
+        );
+      }
+    } catch (error: any) {
+      console.error("Gagal sinkronisasi profil:", error.message);
+      // Jika error 401 (Unauthorized), tendang ke login
+      if (error.response?.status === 401) {
+        Alert.alert("Sesi Berakhir", "Silakan login kembali.");
+        router.replace("/login" as any);
+      }
+    }
+  };
 
   const loadInitialData = async () => {
     try {
@@ -67,16 +104,16 @@ export default function PostStrikeScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 5],
-      quality: 0.1, // Kompres agar string base64 tidak terlalu panjang
-      base64: true, // WAJIB TRUE
+      quality: 0.5,
+      base64: true,
     });
 
     if (!result.canceled) {
       setSelectedImage(result.assets[0].uri);
-      setBase64Data(result.assets[0].base64 || null); // Simpan datanya di sini
+      setBase64Data(result.assets[0].base64 || null);
     }
   };
 
@@ -86,39 +123,46 @@ export default function PostStrikeScreen() {
     if (!formData.species || !formData.weight || !selectedSpot)
       return Alert.alert("Data Kurang", "Lengkapi semua form.");
 
+    if (!currentUser) {
+      return Alert.alert(
+        "Eror",
+        "Data user tidak ditemukan. Coba buka ulang halaman ini."
+      );
+    }
+
     setIsSubmitting(true);
 
     try {
-      // KITA KIRIM SEBAGAI JSON BIASA (Bukan FormData)
       const payload = {
+        user_id: currentUser.id, // ID diambil dari state yang sudah sinkron
         nama_ikan: formData.species,
         berat: formData.weight,
         panjang: formData.length || "0",
         caption: formData.story || "",
         wild_spot_id: selectedSpot.id,
-        foto_base64: base64Data, // Kirim string panjangnya
+        foto_base64: `data:image/jpeg;base64,${base64Data}`,
       };
 
-      // PANGGIL ROUTE BARU DI BACKEND (atau ganti logika di controller /feeds)
       const response = await api.post("/feeds", payload);
 
       if (response.status === 200 || response.status === 201) {
-        Alert.alert("Berhasil!", "Strike kamu telah diposting!", [
-          { text: "OK", onPress: () => router.replace("/(tabs)/feed" as any) },
-        ]);
+        Alert.alert(
+          "Berhasil!",
+          `Strike kamu telah diposting sebagai ${currentUser.nama_lengkap}!`,
+          [{ text: "OK", onPress: () => router.replace("./feed" as any) }]
+        );
       }
     } catch (error: any) {
-      console.log("DEBUG ERROR:", error.message);
+      console.error("DEBUG ERROR POST:", error.response?.data || error.message);
       Alert.alert(
         "Gagal Posting",
-        "Pastikan backend sudah support terima JSON/Base64."
+        error.response?.data?.message || "Terjadi kesalahan pada server."
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ... sisa render UI (return) tetap sama seperti sebelumnya ...
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -133,6 +177,15 @@ export default function PostStrikeScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* User Indikator */}
+        <View style={styles.userBadge}>
+          <Text style={styles.userBadgeText}>
+            {currentUser
+              ? `Posting sebagai: ${currentUser.nama_lengkap}`
+              : "Menghubungkan akun..."}
+          </Text>
+        </View>
+
         <TouchableOpacity style={styles.uploadContainer} onPress={pickImage}>
           {selectedImage ? (
             <Image
@@ -221,9 +274,12 @@ export default function PostStrikeScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.submitButton}
+          style={[
+            styles.submitButton,
+            (isSubmitting || !currentUser) && { opacity: 0.5 },
+          ]}
           onPress={handleSubmit}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !currentUser}
         >
           {isSubmitting ? (
             <ActivityIndicator color="#0f2238" />
@@ -307,7 +363,6 @@ export default function PostStrikeScreen() {
   );
 }
 
-// ... styles tetap sama ...
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   header: {
@@ -327,6 +382,20 @@ const styles = StyleSheet.create({
   backButton: { width: 40 },
   placeholder: { width: 40 },
   scrollContent: { padding: 20 },
+  userBadge: {
+    backgroundColor: "#f0fdf4",
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+  },
+  userBadgeText: {
+    fontSize: 12,
+    color: "#166534",
+    textAlign: "center",
+    fontWeight: "600",
+  },
   uploadContainer: {
     width: "100%",
     aspectRatio: 4 / 3,
