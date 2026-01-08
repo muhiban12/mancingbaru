@@ -22,7 +22,7 @@ const { width, height } = Dimensions.get('window');
 export default function SpotDetailScreen() {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(12);
-  const [selectedSeat, setSelectedSeat] = useState('B-2');
+  const [selectedSeat, setSelectedSeat] = useState('B-6');
   const [duration, setDuration] = useState(3);
   const [startTime, setStartTime] = useState('08:00');
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -51,9 +51,9 @@ export default function SpotDetailScreen() {
   ];
 
   const seats = [
-    'available', 'occupied', 'available', 'available', 'available', 'event',
-    'available', 'selected', 'occupied', 'available', 'event', 'available',
-    'available', 'occupied', 'available', 'occupied', 'available', 'available'
+    'occupied', 'occupied', 'occupied', 'occupied', 'occupied', 'event',
+    'occupied', 'selected', 'occupied', 'occupied', 'event', 'occupied',
+    'occupied', 'occupied', 'occupied', 'occupied', 'occupied', 'occupied'
   ];
 
   const reviews = [
