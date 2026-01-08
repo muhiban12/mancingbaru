@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     fontWeight:'600',
     marginTop:12,
     marginLeft:16,
-    color:'#111518'
+    color:'#111518',
   },
   option: {
     flexDirection:'row',
@@ -227,7 +227,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 2,
+    paddingTop: 12,
   },
   spotOption: {
     flexDirection: 'row',
