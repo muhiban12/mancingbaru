@@ -351,7 +351,11 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff" },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#ffffff",
+    paddingTop: -55,
+  },
   centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
