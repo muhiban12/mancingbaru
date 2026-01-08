@@ -9,6 +9,7 @@ import {
   Image,
   Dimensions,
   Modal,  
+  Alert,
   TouchableWithoutFeedback,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -22,7 +23,7 @@ const { width, height } = Dimensions.get('window');
 export default function SpotDetailScreen() {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(12);
-  const [selectedSeat, setSelectedSeat] = useState('B-6');
+  const [selectedSeat, setSelectedSeat] = useState('B-1');
   const [duration, setDuration] = useState(3);
   const [startTime, setStartTime] = useState('08:00');
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -52,7 +53,7 @@ export default function SpotDetailScreen() {
 
   const seats = [
     'occupied', 'occupied', 'occupied', 'occupied', 'occupied', 'event',
-    'occupied', 'selected', 'occupied', 'occupied', 'event', 'occupied',
+    'occupied', 'occupied', 'occupied', 'occupied', 'event', 'occupied',
     'occupied', 'occupied', 'occupied', 'occupied', 'occupied', 'occupied'
   ];
 
@@ -90,7 +91,12 @@ export default function SpotDetailScreen() {
   };
 
   const handleBookNow = () => {
-    router.push('/pembayaran');
+    if (selectedSeat.seatAvailable){
+      Alert.alert("berhasil");
+      router.push('/pembayaran');
+    }else{
+      Alert.alert("penuh");
+        }
   };
   const handleWriteReview = () => {
     router.push('/ulasan');
@@ -482,9 +488,7 @@ export default function SpotDetailScreen() {
                       seat === 'event' && styles.seatEvent,
                       seat === 'selected' && styles.seatSelected,
                     ]}
-                    disabled={seat === 'occupied' || seat === 'event'}
-                    onPress={() => setSelectedSeat(`B-${index + 1}`)}
-                  >
+                    disabled={seat === 'occupied' || seat === 'event'}                  >
                     {seat === 'occupied' && (
                       <MaterialIcons name="close" size={16} color="#9ca3af" />
                     )}
