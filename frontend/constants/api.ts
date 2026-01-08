@@ -12,7 +12,7 @@ const CLEAN_URL = NGROK_URL.replace(/\/$/, "");
 
 export const API_BASE_URL = `${CLEAN_URL}/api`;
 
-export const API_TIMEOUT = 15000;
+export const API_TIMEOUT = 30000;
 
 // Helper untuk URL gambar
 export const getFileUrl = (path: string) => {

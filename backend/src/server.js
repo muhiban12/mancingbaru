@@ -1,38 +1,38 @@
 require("dotenv").config();
 const path = require("path");
 const pool = require("./config/db");
-const fastify = require("fastify")({ 
-  logger: { level: 'info' }, // Logger lebih bersih
-  ajv: { customOptions: { removeAdditional: "all" } } // Keamanan tambahan
+const fastify = require("fastify")({
+  logger: true,
+  bodyLimit: 20 * 1024 * 1024, // Naikkan ke 20MB di sini
 });
+
+// 1. DAFTARKAN MULTER CONTENT PARSER DULU (Cukup 1x)
 const multer = require("fastify-multer");
+fastify.register(multer.contentParser);
 
 /* ================= CORE PLUGINS ================= */
 
-// 1. CORS - Dibuat fleksibel agar Expo (Mobile) bisa tembus
+// 2. CORS (Pastikan origin true atau sesuai ngrok)
+// server.js
 fastify.register(require("@fastify/cors"), {
-  origin: true, // Mengizinkan semua origin di development
+  origin: true, // Sudah benar
   methods: ["GET", "PUT", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["*"], // IZINKAN SEMUA HEADER
+  credentials: true,
 });
 
-// 2. Multipart / Upload - Pastikan ini sebelum Routes
-fastify.register(multer.contentParser);
-
-// 3. Static Files - Diarahkan ke folder 'public' atau langsung 'uploads'
-// Supaya buildFileUrl (http://ip:3000/uploads/folder/file.jpg) jalan
+// 3. STATIC FILES
+// Sesuai struktur folder kamu, uploads ada di ROOT backend (sejajar src)
 fastify.register(require("@fastify/static"), {
-  root: path.join(__dirname, "../uploads"), // Sesuaikan dengan struktur folder repo baru
+  root: path.join(__dirname, "../uploads"), // Gunakan ../ karena server.js ada di src
   prefix: "/uploads/",
-  decorateReply: false // Agar tidak bentrok jika ada static plugin lain
 });
 
-// 4. JWT - Integrasi dengan request.user
+// 4. JWT
 fastify.register(require("@fastify/jwt"), {
   secret: process.env.JWT_SECRET || "mancing_mania_mantap_123",
 });
 
-// Decorator agar request.user tersedia secara global di controller
 fastify.decorate("authenticate", async (request, reply) => {
   try {
     await request.jwtVerify();
@@ -41,22 +41,7 @@ fastify.decorate("authenticate", async (request, reply) => {
   }
 });
 
-/* ================= HEALTH CHECK & DEBUG ================= */
-fastify.get("/cek-koneksi", async (request, reply) => {
-  try {
-    const [rows] = await pool.execute("SELECT 1 + 1 AS result");
-    return {
-      status: "Success",
-      message: "Backend Connected to Database: " + process.env.DB_NAME,
-      env_ip: process.env.BASE_URL
-    };
-  } catch (err) {
-    return reply.code(500).send({ status: "Error", message: err.message });
-  }
-});
-
 /* ================= ROUTES ================= */
-// Daftarkan rute utama
 fastify.register(require("./routes/indexRoutes"), {
   prefix: "/api",
 });
@@ -65,29 +50,11 @@ fastify.register(require("./routes/indexRoutes"), {
 const start = async () => {
   try {
     const PORT = process.env.PORT || 3000;
-    
-    // Test Database
-    const connection = await pool.getConnection();
-    console.log("✅ [DB] Database Connected Successfully");
-    connection.release();
-
-    // Listen di 0.0.0.0 sangat penting untuk Expo/Mobile Testing
-    await fastify.listen({
-      port: PORT,
-      host: "0.0.0.0",
-    });
-
-    console.log(`
-🚀 SERVER PANCINGIN BERHASIL DIAKTIFKAN
-=======================================
-📍 Local:   http://localhost:${PORT}
-📍 Network: ${process.env.EXPO_PUBLIC_API_URL}
-=======================================
-    `);
+    await fastify.listen({ port: Number(PORT), host: "0.0.0.0" });
+    console.log(`🚀 SERVER PANCINGIN AKTIF`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
   }
 };
-
 start();

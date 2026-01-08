@@ -1,27 +1,26 @@
 const multer = require("fastify-multer");
 const path = require("path");
+const fs = require("fs");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/ponds");
+    // NAIK 2 TINGKAT: dari src/middlewares ke root backend
+    const uploadPath = path.join(__dirname, "../../uploads/feeds");
+    
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext);
-  },
-
-  fileFilter: (req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "image/jpg"];
-    if (!allowed.includes(file.mimetype)) {
-      return cb(new Error("File harus gambar"));
-    }
-    cb(null, true);
-  },
-  limits: {
-    fileSize: 2 * 1024 * 1024, // 2MB
+    cb(null, `strike-${Date.now()}${ext}`);
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
 
 module.exports = upload;

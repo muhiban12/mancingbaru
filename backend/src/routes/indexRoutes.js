@@ -6,10 +6,10 @@ module.exports = async function (fastify) {
   const auth = require("../controllers/authController");
   fastify.post("/auth/register", auth.register);
   fastify.post("/auth/login", auth.login);
-  
-  fastify.post('/user/upgrade-to-owner', {
+
+  fastify.post("/user/upgrade-to-owner", {
     preHandler: [authenticate],
-    handler: auth.submitOwnerUpgrade
+    handler: auth.submitOwnerUpgrade,
   });
 
   /* ================= MAP & PUBLIC ================= */
@@ -141,7 +141,11 @@ module.exports = async function (fastify) {
   /* ================= WALLET / FINANCE ================= */
   const finance = require("../controllers/financeController");
 
-  fastify.get("/wallet", { preHandler: [authenticate] }, finance.getOwnerWallet);
+  fastify.get(
+    "/wallet",
+    { preHandler: [authenticate] },
+    finance.getOwnerWallet
+  );
   fastify.get(
     "/wallet/transactions",
     { preHandler: [authenticate] },
@@ -157,8 +161,10 @@ module.exports = async function (fastify) {
   const master = require("../controllers/masterController");
   fastify.get("/master/fish", master.getFishMaster);
   fastify.get("/master/facilities", master.getMasterFacilities);
-
-  /* ================= NOTIFICATIONS ================= */
+  fastify.get(
+    "/master/wild-spots",
+    master.getWildSpotMaster
+  ); /* ================= NOTIFICATIONS ================= */
   const notif = require("../controllers/notificationsController");
 
   fastify.get(
@@ -248,40 +254,40 @@ module.exports = async function (fastify) {
     admin.deleteEvent
   );
 
-  fastify.get('/admin/owner-upgrade-requests', {
+  fastify.get("/admin/owner-upgrade-requests", {
     preHandler: [authenticate, isAdmin],
-    handler: admin.getOwnerUpgradeRequests
+    handler: admin.getOwnerUpgradeRequests,
   });
-  fastify.get('/admin/owner-upgrade-requests/:user_id', {
+  fastify.get("/admin/owner-upgrade-requests/:user_id", {
     preHandler: [authenticate, isAdmin],
-    handler: admin.getOwnerUpgradeDetail
+    handler: admin.getOwnerUpgradeDetail,
   });
-  fastify.post('/admin/owner-upgrade-requests/:user_id/approve', {
+  fastify.post("/admin/owner-upgrade-requests/:user_id/approve", {
     preHandler: [authenticate, isAdmin],
-    handler: admin.approveOwnerUpgrade
+    handler: admin.approveOwnerUpgrade,
   });
 
   /* ================= OWNER ================= */
-  const owner = require('../controllers/ownerController');
+  const owner = require("../controllers/ownerController");
 
   // Routes untuk owner dashboard
-  fastify.get('/owner/spots', {
+  fastify.get("/owner/spots", {
     preHandler: [authenticate],
-    handler: owner.getOwnerSpots
+    handler: owner.getOwnerSpots,
   });
 
-  fastify.get('/owner/dashboard', {
+  fastify.get("/owner/dashboard", {
     preHandler: [authenticate],
-    handler: owner.getOwnerDashboard
+    handler: owner.getOwnerDashboard,
   });
 
-  fastify.post('/owner/set-active-spot', {
+  fastify.post("/owner/set-active-spot", {
     preHandler: [authenticate],
-    handler: owner.setActiveSpot
+    handler: owner.setActiveSpot,
   });
 
-  fastify.get('/owner/status', {
+  fastify.get("/owner/status", {
     preHandler: [authenticate],
-    handler: owner.getOwnerStatus
+    handler: owner.getOwnerStatus,
   });
 };

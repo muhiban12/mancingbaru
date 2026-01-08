@@ -1,9 +1,11 @@
-//src/controllers/helper/file.herlper.js
-const BASE_URL = process.env.BASE_URL;
+// src/controllers/helper/file.helper.js
 
 const buildFileUrl = (request, folder) => {
   if (!request.file) return null;
-  return `${BASE_URL}/uploads/${folder}/${request.file.filename}`;
+  
+  // JANGAN gunakan BASE_URL dari env untuk disimpan ke DB.
+  // Cukup simpan path relatifnya saja.
+  return `/uploads/${folder}/${request.file.filename}`;
 };
 
 module.exports = { buildFileUrl };
