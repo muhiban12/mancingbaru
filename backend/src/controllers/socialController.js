@@ -1,27 +1,44 @@
 const pool = require("../config/db");
 const { buildFileUrl } = require("./helper/file.helper");
+const fs = require("fs");
+const path = require("path");
 
 const createStrikeFeed = async (request, reply) => {
   try {
-    // 1. Cek apakah file ada
-    if (!request.file) {
-      console.log("❌ Error: No file uploaded");
+    // Ambil data dari body (JSON)
+    const { nama_ikan, berat, panjang, caption, wild_spot_id, foto_base64 } = request.body;
+    const userId = request.user.id;
+
+    let finalImageName = "";
+
+    // 1. LOGIKA TERIMA GAMBAR
+    if (foto_base64) {
+      // JALUR BASE64 (Solusi untuk Ngrok)
+      finalImageName = `strike-${Date.now()}.jpg`;
+      const filePath = path.join(__dirname, "../../uploads/feeds", finalImageName);
+      
+      // Hilangkan header base64 jika ada
+      const base64Data = foto_base64.replace(/^data:image\/\w+;base64,/, "");
+      
+      // Simpan ke folder
+      fs.writeFileSync(filePath, base64Data, { encoding: "base64" });
+      finalImageName = `feeds/${finalImageName}`;
+    } else if (request.file) {
+      // JALUR MULTER (Jika suatu saat pakai IP Lokal)
+      finalImageName = `feeds/${request.file.filename}`;
+    } else {
+      // Jika tidak ada dua-duanya, baru kasih error 400
+      console.log("❌ Error: No image data provided");
       return reply.code(400).send({ message: "Foto wajib diunggah!" });
     }
 
-    const { wild_spot_id, nama_ikan, berat, panjang, caption } = request.body;
-    const userId = request.user.id;
-
-    // 2. Ambil URL (Sekarang isinya path relatif seperti /uploads/feeds/123.jpg)
-    const fotoUrl = buildFileUrl(request, "feeds");
-
-    if (!wild_spot_id || !nama_ikan || !fotoUrl) {
-      return reply.code(400).send({
-        message: "Lokasi, jenis ikan, dan foto wajib diisi!",
-      });
+    // 2. VALIDASI DATA WAJIB
+    if (!wild_spot_id || !nama_ikan) {
+      return reply.code(400).send({ message: "Lokasi dan jenis ikan wajib diisi!" });
     }
 
-    // 3. Eksekusi Query
+    // 3. EKSEKUSI QUERY (Pastikan nama kolom sesuai: 'foto' atau 'foto_ikan')
+    // Sesuaikan query di bawah dengan nama kolom di tabel database kamu
     await pool.execute(
       `INSERT INTO strike_feeds 
        (user_id, wild_spot_id, nama_ikan, berat, panjang, caption, foto_ikan) 
@@ -33,20 +50,22 @@ const createStrikeFeed = async (request, reply) => {
         berat || 0,
         panjang || 0,
         caption || "",
-        fotoUrl,
+        finalImageName,
       ]
     );
 
     return reply.code(201).send({
       status: "Success",
       message: "Strike berhasil diposting!",
-      foto: fotoUrl,
+      foto: finalImageName,
     });
+
   } catch (error) {
-    console.error("🔥 DATABASE ERROR:", error.message);
+    console.error("🔥 BACKEND ERROR:", error.message);
     return reply.code(500).send({ error: "Terjadi kesalahan pada server" });
   }
 };
+
 
 const getStrikeFeeds = async (request, reply) => {
   try {

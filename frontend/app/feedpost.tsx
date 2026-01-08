@@ -18,10 +18,12 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { socialAPI, masterAPI } from "../services/apiEndpoint";
+import api from "../services/apiService"; // Import api langsung untuk bypass FormData
 
 export default function PostStrikeScreen() {
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [base64Data, setBase64Data] = useState<string | null>(null); // STATE YANG TADI KURANG
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [fishList, setFishList] = useState<any[]>([]);
@@ -57,71 +59,66 @@ export default function PostStrikeScreen() {
       console.error("Gagal mengambil data master:", error);
     }
   };
+
   const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Izin Diperlukan", "Izin galeri dibutuhkan.");
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
-      aspect: [1, 1], // Square lebih kecil ukurannya
-      quality: 0.1, // KOMPRES MAKSIMAL (0.1 atau 0.05)
+      aspect: [4, 5],
+      quality: 0.1, // Kompres agar string base64 tidak terlalu panjang
+      base64: true, // WAJIB TRUE
     });
+
     if (!result.canceled) {
       setSelectedImage(result.assets[0].uri);
+      setBase64Data(result.assets[0].base64 || null); // Simpan datanya di sini
     }
   };
 
   const handleSubmit = async () => {
-    // 1. Validasi Input
-    if (!selectedImage)
-      return Alert.alert("Foto Kosong", "Pilih foto strike kamu dulu.");
-    if (!formData.species)
-      return Alert.alert("Ikan Kosong", "Pilih jenis ikan.");
-    if (!formData.weight) return Alert.alert("Berat Kosong", "Isi berat ikan.");
-    if (!selectedSpot)
-      return Alert.alert("Lokasi Kosong", "Pilih lokasi mancing.");
+    if (!selectedImage || !base64Data)
+      return Alert.alert("Foto Kosong", "Pilih foto dulu.");
+    if (!formData.species || !formData.weight || !selectedSpot)
+      return Alert.alert("Data Kurang", "Lengkapi semua form.");
 
     setIsSubmitting(true);
 
     try {
-      const data = new FormData();
-      data.append("nama_ikan", formData.species);
-      data.append("berat", formData.weight);
-      data.append("panjang", formData.length || "0");
-      data.append("caption", formData.story || "");
-      data.append("wild_spot_id", selectedSpot.id.toString());
+      // KITA KIRIM SEBAGAI JSON BIASA (Bukan FormData)
+      const payload = {
+        nama_ikan: formData.species,
+        berat: formData.weight,
+        panjang: formData.length || "0",
+        caption: formData.story || "",
+        wild_spot_id: selectedSpot.id,
+        foto_base64: base64Data, // Kirim string panjangnya
+      };
 
-      // @ts-ignore
-      data.append("foto", {
-        uri: selectedImage,
-        name: `strike.jpg`, // Nama simpel
-        type: "image/jpeg",
-      });
-
-      const response = await socialAPI.createFeed(data, {
-        // PAKSA TIMEOUT SANGAT LAMA UNTUK NGROK
-        timeout: 60000,
-        headers: {
-          Accept: "application/json",
-        },
-        transformRequest: (data: any) => data,
-      });
+      // PANGGIL ROUTE BARU DI BACKEND (atau ganti logika di controller /feeds)
+      const response = await api.post("/feeds", payload);
 
       if (response.status === 200 || response.status === 201) {
-        Alert.alert("Berhasil!", "Postingan masuk.");
-        router.replace("/(tabs)/feed" as any);
+        Alert.alert("Berhasil!", "Strike kamu telah diposting!", [
+          { text: "OK", onPress: () => router.replace("/(tabs)/feed" as any) },
+        ]);
       }
     } catch (error: any) {
-      // CEK DISINI: Kalau error message tetap "Network Error",
-      // berarti Ngrok memutus koneksi sebelum file sampai ke backend.
-      console.log("DEBUG NGROK ERROR:", error.message);
+      console.log("DEBUG ERROR:", error.message);
       Alert.alert(
-        "Error",
-        "Ngrok memutus koneksi. Coba ganti sinyal atau kecilkan gambar lagi."
+        "Gagal Posting",
+        "Pastikan backend sudah support terima JSON/Base64."
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ... sisa render UI (return) tetap sama seperti sebelumnya ...
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -168,7 +165,6 @@ export default function PostStrikeScreen() {
             >
               {formData.species || "Pilih Jenis Ikan"}
             </Text>
-            <MaterialIcons name="arrow-drop-down" size={24} color="#64748b" />
           </TouchableOpacity>
 
           <View style={styles.row}>
@@ -195,7 +191,7 @@ export default function PostStrikeScreen() {
             </View>
           </View>
 
-          <Text style={styles.inputLabel}>Lokasi Mancing (Wild Spot)</Text>
+          <Text style={styles.inputLabel}>Lokasi Mancing</Text>
           <TouchableOpacity
             style={styles.inputContainer}
             onPress={() => setIsSpotModalVisible(true)}
@@ -209,16 +205,15 @@ export default function PostStrikeScreen() {
             >
               {selectedSpot ? selectedSpot.nama : "Pilih Lokasi Mancing"}
             </Text>
-            <MaterialIcons name="arrow-drop-down" size={24} color="#64748b" />
           </TouchableOpacity>
 
           <Text style={styles.inputLabel}>Cerita Strike</Text>
           <TextInput
             style={[
               styles.inputContainer,
-              { height: 100, textAlignVertical: "top", paddingTop: 12 },
+              { height: 80, textAlignVertical: "top" },
             ]}
-            placeholder="Tulis caption menarik..."
+            placeholder="Tulis caption..."
             multiline
             value={formData.story}
             onChangeText={(v) => setFormData({ ...formData, story: v })}
@@ -226,7 +221,7 @@ export default function PostStrikeScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && { opacity: 0.6 }]}
+          style={styles.submitButton}
           onPress={handleSubmit}
           disabled={isSubmitting}
         >
@@ -312,6 +307,7 @@ export default function PostStrikeScreen() {
   );
 }
 
+// ... styles tetap sama ...
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   header: {

@@ -118,7 +118,7 @@ module.exports = async function (fastify) {
   fastify.get("/feeds", social.getStrikeFeeds);
   fastify.post(
     "/feeds",
-    { preHandler: [authenticate, upload.single("foto")] },
+    { preHandler: [authenticate] },
     social.createStrikeFeed
   );
   fastify.post(
